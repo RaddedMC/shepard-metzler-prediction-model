@@ -9,7 +9,15 @@ def list_all_angles(angle_round):
             
 # Generate all polycubes that can be made from 1 to n cubes
 def generate_all_polycubes(num_cubes):
-    return generator.generate_polycubes(num_cubes)
+    polycube_coords_list = []
+    for i in range(1, num_cubes + 1):
+        polycube_list = generator.generate_polycubes(i)
+        for cube in polycube_list:
+            blocks = []
+            for block in cube.cubes:
+                blocks.append((block.x, block.y, block.z))
+            polycube_coords_list.append(blocks)
+    return polycube_coords_list
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate cubes with specified parameters.")
@@ -21,4 +29,6 @@ if __name__ == "__main__":
     angle_round = args.angle_round
     
     # print([ i for i in list_all_angles(angle_round)])
-    print(generate_all_polycubes(num_cubes))
+    polycube_coords_list = generate_all_polycubes(num_cubes)
+    [print(coords) for coords in polycube_coords_list]
+    print(len(polycube_coords_list))
