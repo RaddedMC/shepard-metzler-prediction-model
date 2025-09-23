@@ -2,15 +2,7 @@ import pygame
 from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
-
-### Defined values ###
-cube_positions = [
-    (0,0,0),
-    (2,0,0),
-    (4,0,0),
-    (4,2,0),
-    (4,4,0),
-]
+import argparse
 
 # Define a cube (8 vertices)
 vertices = [
@@ -94,5 +86,14 @@ def render_shape(cubes, angle=(30,30)):
     pygame.quit()
 
 # Example: build a shape (like a "stair step" of cubes)
-anglex = 40
-render_shape(cube_positions, angle=(anglex,45))
+# anglex = 40
+# render_shape(cube_positions, angle=(anglex,45))
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Shepard-Metzler Cube-Shape Renderer")
+    parser.add_argument('--angle', type=float, nargs=3, help='Viewing angle as three floats: rot_x rot_y rot_z')
+    parser.add_argument('--positions', type=str, help='List of cubes and their positions. Formatted as "[(x1,y1,z1), (x2,y2,z2), ...]". A maximum of 5 cubes is permitted.')
+    parser.add_argument('--csv', type=str, help='Path to a CSV file containing cube positions and orientations. This will generate pairs of images and can perform batch processing. Can be used instead of --angle and --positions.')
+    
+    args = parser.parse_args()
+    args.angle
