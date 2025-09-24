@@ -19,7 +19,7 @@ def generate_polycubes(n):
     unique_hashes = set()
     lock = Lock()
     total = len(base_cubes)
-    print(f"Processing {total} base polycubes of size {n-1}")
+    # print(f"Processing {total} base polycubes of size {n-1}")
 
     def process_base_cube(base_cube):
         local_polycubes = []
@@ -39,9 +39,9 @@ def generate_polycubes(n):
     with ThreadPoolExecutor() as executor:
         for idx, local_polycubes in enumerate(executor.map(process_base_cube, base_cubes)):
             results.extend(local_polycubes)
-            if idx % 100 == 0 or idx == total - 1:
-                print(f"\rGenerating polycubes n={n}: {100.0 * idx / total:.1f}%", end="", flush=True)
-    print(f"\rGenerating polycubes n={n}: 100%")
+            #if idx % 100 == 0 or idx == total - 1:
+                #print(f"\rGenerating polycubes n={n}: {100.0 * idx / total:.1f}%", end="", flush=True)
+    #print(f"\rGenerating polycubes n={n}: 100%")
     print(f"Found {len(results)} unique polycubes")
 
     return results
@@ -65,38 +65,3 @@ def get_known_count(n):
         15: 8107839447, 16: 62709211271, 17: 489997729602, 18: 3847265309118
     }
     return known_counts.get(n)
-
-def generate_summary(polycubes):
-    if not polycubes:
-        print("Summary: No polycubes to analyze")
-        return
-
-    flat_count = 0
-    linear_count = 0
-    for polycube in polycubes:
-        if polycube.is_flat():
-            flat_count += 1
-            if polycube.is_linear():
-                linear_count += 1
-        elif polycube.is_linear():
-            linear_count += 1
-    three_d_count = len(polycubes) - flat_count
-
-    print("\nSummary:")
-    print(f"  1D Linear shapes: {linear_count}")
-    print(f"  2D Flat shapes: {flat_count - linear_count}")
-    print(f"  3D shapes: {three_d_count}")
-
-    max_dim = max(
-        max(p.get_dimensions())
-        for p in polycubes
-    )
-    print(f"\n  Maximum dimension: {max_dim}")
-
-    dim_counts = Counter(
-        max(p.get_dimensions())
-        for p in polycubes
-    )
-    print("  Distribution by maximum dimension:")
-    for dim in sorted(dim_counts):
-        print(f"    Max dim {dim}: {dim_counts[dim]} shapes")
