@@ -4,8 +4,13 @@ import zstandard as zstd
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 from collections import Counter
+import argparse
 
-from .polycube import Polycube
+# from .polycube import Polycube
+from polycube import Polycube
+from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
+from itertools import product, combinations
 
 def generate_polycubes(n):
     if n < 1:
@@ -19,7 +24,6 @@ def generate_polycubes(n):
     unique_hashes = set()
     lock = Lock()
     total = len(base_cubes)
-    # print(f"Processing {total} base polycubes of size {n-1}")
 
     def process_base_cube(base_cube):
         local_polycubes = []
@@ -29,6 +33,7 @@ def generate_polycubes(n):
                 continue
             normalized = expanded_shape.normalize()
             canonical_hash = normalized.get_canonical_hash()
+            # Only add if not already present (avoid rotations)
             with lock:
                 if canonical_hash not in unique_hashes:
                     unique_hashes.add(canonical_hash)
@@ -37,14 +42,17 @@ def generate_polycubes(n):
 
     results = []
     with ThreadPoolExecutor() as executor:
-        for idx, local_polycubes in enumerate(executor.map(process_base_cube, base_cubes)):
+        for local_polycubes in executor.map(process_base_cube, base_cubes):
             results.extend(local_polycubes)
-            #if idx % 100 == 0 or idx == total - 1:
-                #print(f"\rGenerating polycubes n={n}: {100.0 * idx / total:.1f}%", end="", flush=True)
-    #print(f"\rGenerating polycubes n={n}: 100%")
-    print(f"Found {len(results)} unique polycubes")
+    # Only keep unique canonical polycubes
+    canonical_polycubes = {}
+    for polycube in results:
+        h = polycube.get_canonical_hash()
+        if h not in canonical_polycubes:
+            canonical_polycubes[h] = polycube
+    print(f"Found {len(canonical_polycubes)} unique polycubes")
 
-    return results
+    return list(canonical_polycubes.values())
 
 def save_to_cache(polycubes, path):
     serialized = pickle.dumps(polycubes)
@@ -65,3 +73,52 @@ def get_known_count(n):
         15: 8107839447, 16: 62709211271, 17: 489997729602, 18: 3847265309118
     }
     return known_counts.get(n)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Generate cubes with specified parameters.")
+    parser.add_argument('-n', '--num-cubes', type=int, default=5, help='Maximum limit of cubes in the shape')
+    args = parser.parse_args()
+    num_cubes = args.num_cubes
+    
+    polycube_coords_list = []
+    for i in range(1, num_cubes + 1):
+        polycube_list = generate_polycubes(i)
+        for cube in polycube_list:
+            blocks = []
+            for block in cube.cubes:
+                blocks.append((block.x, block.y, block.z))
+            polycube_coords_list.append(blocks)
+    # Only print unique cubes
+    unique_coords = []
+    seen = set()
+    for blocks in polycube_coords_list:
+        key = tuple(sorted(blocks))
+        if key not in seen:
+            seen.add(key)
+            unique_coords.append(blocks)
+    [print(i) for i in unique_coords]
+    print(len(unique_coords))
+    
+    import matplotlib.pyplot as plt
+
+    os.makedirs("images", exist_ok=True)
+
+    def render_cube(blocks, filename):
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.set_box_aspect([1,1,1])
+        for x, y, z in blocks:
+            # Draw cube at (x, y, z)
+            r = [0, 1]
+            for s, e in combinations(np.array(list(product(r, r, r))), 2):
+                if np.sum(np.abs(s-e)) == 1:
+                    ax.plot3D(*zip(s + np.array([x, y, z]), e + np.array([x, y, z])), color="b")
+        ax.set_axis_off()
+        plt.tight_layout()
+        plt.savefig(filename)
+        plt.close(fig)
+
+
+    for idx, blocks in enumerate(unique_coords):
+        filename = os.path.join("images", f"cube_{idx}.png")
+        render_cube(blocks, filename)
