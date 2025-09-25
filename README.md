@@ -3,9 +3,9 @@
 This project, completed for ECE 9611 Intro to Machine Learning, aims to create a machine learning model that can solve Shepard and Metzler cube problems.
 
 > **FOR ECE 9611 TA**\
-> To see our dataset for Phase 1, please go to `data_generate/paired_cubes.csv`\
-> The images are too large to store on GitHub, so only text data is available.\
-> We are using an alternative storage solution for the image data. We can provide you access to this should you desire.
+> Our dataset for Phase 1, is too large to upload to GitHub.\
+> You can run the generation code on your own machine if you wish. The text data should be X.XX GB.\
+> We are using an alternative storage solution for our dataset. We can provide you access to this should you desire.\
 
 ## Components
 This project is build from multiple parts:
@@ -22,6 +22,6 @@ Creators of this project:
 - Anthony Barros
 
 Other projects used:
-- https://github.com/tjgokken/polycube-generator/tree/main/src
-    - Using GPT-4 to convert to Python, this algorithm was used for generating all polycubes from 1 to n.
+- https://github.com/mikepound/cubes
+    - This algorithm was used for generating all polycubes from 1 to n.
     - See `data_generate/polycube_generator/` for implementation
