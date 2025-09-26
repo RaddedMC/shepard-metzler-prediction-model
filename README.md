@@ -4,8 +4,16 @@ This project, completed for ECE 9611 Intro to Machine Learning, aims to create a
 
 > **FOR ECE 9611 TA**\
 > Our dataset for Phase 1, is too large to upload to GitHub.\
-> You can run the generation code on your own machine if you wish. The text data should be X.XX GB.\
+> You can run the generation code on your own machine if you wish, but beware that datasets can reach into the hundreds of GB!.\
 > We are using an alternative storage solution for our dataset. We can provide you access to this should you desire.\
+
+## The data
+We are generating images of Shepard and Metzler cubes represented in various angles.
+- There are 41 polycubes from n=1 to n=5.
+- We are rounding angles to the nearest 20 degrees. There are 2 axes, so (360/20)^2 = 324 viewing angles
+- This leads to 13,284 independent images.
+- We need to pair each image to **all** other images for the training set, creating a total number of (13,284)^2= 176,464,656 image pairs.
+- It is infeasible to generate 176 million images at our student-level scale, so we will randomly select 0.33% of the data, or 582,333 images for model training.
 
 ## Components
 This project is build from multiple parts:

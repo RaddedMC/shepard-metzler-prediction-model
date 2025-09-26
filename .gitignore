@@ -25,4 +25,4 @@ venv.bak/
 *.png
 
 # Text data
-.csv
+*.csv
