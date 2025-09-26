@@ -20,6 +20,13 @@ def generate_all_polycubes(num_cubes):
         for i, cube in enumerate(polycube_i_list):
             coords = list(zip(*np.nonzero(cube)))
             polycube_coords_list.append(coords)
+    
+    # Convert back to standard int
+    for i in range(0, len(polycube_coords_list)):
+        for j in range(0, len(polycube_coords_list[i])):
+            for k in range(0, len(polycube_coords_list[i][j])):
+                polycube_coords_list[i][j] = tuple(int(i) for i in polycube_coords_list[i][j])
+            
     return polycube_coords_list
 
 def write_single_cubes(angles_polycubes):
@@ -37,11 +44,11 @@ def write_single_cubes(angles_polycubes):
             row = []
             num_cubes_i = len(i[0])
             block_positions = []
-            for cube in range(0, num_cubes-1):
+            for cube in range(0, num_cubes):
                 try:
                     block_positions.append(i[0][cube])
                 except IndexError:
-                    block_positions.append("")
+                    block_positions.append("()")
             angle_x = i[1][0]
             angle_y = i[1][1]
             
@@ -58,21 +65,21 @@ def paired_row(args):
     id = i * len(angles_polycubes) + j
     num_cubes_i = len(angles_polycubes[i][0])
     block_positions_i = []
-    for cube in range(0, num_cubes_i):
-        try:
-            block_positions_i.append(angles_polycubes[i][0][cube-1])
-        except IndexError:
-            block_positions_i.append("")
+    for cube in range(0, num_cubes):
+        if cube < len(angles_polycubes[i][0]):
+            block_positions_i.append(angles_polycubes[i][0][cube])
+        else:
+            block_positions_i.append("()")
     angle_x_i = angles_polycubes[i][1][0]
     angle_y_i = angles_polycubes[i][1][1]
     
     num_cubes_j = len(angles_polycubes[j][0])
     block_positions_j = []
-    for cube in range(0, num_cubes_j):
-        try:
-            block_positions_j.append(angles_polycubes[j][0][cube-1])
-        except IndexError:
-            block_positions_j.append("")
+    for cube in range(0, num_cubes):
+        if cube < len(angles_polycubes[j][0]):
+            block_positions_j.append(angles_polycubes[j][0][cube])
+        else:
+            block_positions_j.append("()")
     angle_x_j = angles_polycubes[j][1][0]
     angle_y_j = angles_polycubes[j][1][1]
     
@@ -112,10 +119,9 @@ def write_paired_cubes(angles_polycubes):
             row = paired_row(args)
             with write_lock:
                 writer.writerow(row)
-                print(f"id: {row[0]}")
             task_queue.task_done()
 
-    with open("paired_cubes.csv", "w", newline='') as f:
+    with open("paired_cubes_2.csv", "w", newline='') as f:
         writer = csv.writer(f)
         writer.writerow(header)
 
@@ -126,8 +132,10 @@ def write_paired_cubes(angles_polycubes):
             t.start()
             threads.append(t)
 
-        for i in range(0, len(angles_polycubes)):
-            for j in range(0, len(angles_polycubes)):
+        # for i in range(0, len(angles_polycubes)):
+        #     for j in range(0, len(angles_polycubes)):
+        for i in range(0,10):
+            for j in range(0,10):
                 task_queue.put((i, j, angles_polycubes, num_cubes))
 
         # Signal workers to exit
@@ -142,10 +150,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate cubes with specified parameters.")
     parser.add_argument('-n', '--num-cubes', type=int, default=5, help='Maximum limit of cubes in the shape')
     parser.add_argument('-a', '--angle-round', type=int, default=10, help='Round viewing angles to the nearest a degrees')
+    parser.add_argument('-s', '--single-only', type=bool, default=False, help='Only generate single cubes, not paired cubes')
     args = parser.parse_args()
     
     num_cubes = args.num_cubes
     angle_round = args.angle_round
+    single_only = args.single_only
     
     print("Generating angles...")
     angles = list(list_all_angles(angle_round))
@@ -156,7 +166,9 @@ if __name__ == "__main__":
     angles_polycubes = [(y,x) for x in angles for y in polycubes]
     
     write_single_cubes(angles_polycubes)
+    print(angles_polycubes)
             
-    write_paired_cubes(angles_polycubes)
+    if not single_only:
+        write_paired_cubes(angles_polycubes)
             
     print("Done.")
