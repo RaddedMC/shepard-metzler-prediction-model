@@ -121,9 +121,10 @@ def write_paired_cubes(angles_polycubes):
                 writer.writerow(row)
             task_queue.task_done()
 
-    with open("paired_cubes_2.csv", "w", newline='') as f:
+    with open("paired_cubes.csv", "a", newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(header)
+        if pair_id_start == 0:
+            writer.writerow(header)
 
         num_workers = min(8, threading.active_count() + 4)  # adjust as needed
         threads = []
@@ -131,11 +132,13 @@ def write_paired_cubes(angles_polycubes):
             t = threading.Thread(target=worker)
             t.start()
             threads.append(t)
+            
+        i_start = int(pair_id_start / len(angles_polycubes))
+        j_start = pair_id_start - (len(angles_polycubes) * i_start)
+        print(f"Starting at {pair_id_start}, i={i_start}, j={j_start}. angles_polycubes={len(angles_polycubes)}")
 
-        # for i in range(0, len(angles_polycubes)):
-        #     for j in range(0, len(angles_polycubes)):
-        for i in range(0,10):
-            for j in range(0,10):
+        for i in range(i_start, len(angles_polycubes)):
+            for j in range(j_start, len(angles_polycubes)):
                 task_queue.put((i, j, angles_polycubes, num_cubes))
 
         # Signal workers to exit
@@ -151,10 +154,12 @@ if __name__ == "__main__":
     parser.add_argument('-n', '--num-cubes', type=int, default=5, help='Maximum limit of cubes in the shape')
     parser.add_argument('-a', '--angle-round', type=int, default=10, help='Round viewing angles to the nearest a degrees')
     parser.add_argument('-s', '--single-only', type=bool, default=False, help='Only generate single cubes, not paired cubes')
+    parser.add_argument('-p', '--pair-id-start', type=int, default=0, help="Sets the starting id for paired cubes")
     args = parser.parse_args()
     
     num_cubes = args.num_cubes
     angle_round = args.angle_round
+    pair_id_start = args.pair_id_start + 1
     single_only = args.single_only
     
     print("Generating angles...")
@@ -166,7 +171,6 @@ if __name__ == "__main__":
     angles_polycubes = [(y,x) for x in angles for y in polycubes]
     
     write_single_cubes(angles_polycubes)
-    print(angles_polycubes)
             
     if not single_only:
         write_paired_cubes(angles_polycubes)
