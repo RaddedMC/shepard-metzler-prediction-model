@@ -5,13 +5,17 @@ import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
 import threading
+from scipy.spatial.transform import Rotation as R
 
-# List all angles that exist within our desired angle-rounding
-def list_all_angles(angle_round):
+# Generate a list of quaternions for rotations, spaced by angle_round degrees
+def list_all_quaternions(angle_round):
     for x in range(0, 360, angle_round):
         for y in range(0, 360, angle_round):
-            yield (x, y)
-            
+            for z in range(0, 360, angle_round):
+                # Create quaternion from Euler angles (xyz order)
+                quat = R.from_euler('xyz', [x, y, z], degrees=True).as_quat()
+                yield tuple(quat)
+
 # Generate all polycubes that can be made from 1 to n cubes
 def generate_all_polycubes(num_cubes):
     polycube_coords_list = []
@@ -29,18 +33,17 @@ def generate_all_polycubes(num_cubes):
             
     return polycube_coords_list
 
-def write_single_cubes(angles_polycubes):
+def write_single_cubes(quat_polycubes):
     print("Export single-cube list")
     with open("single_cubes.csv", "w") as f:
         writer = csv.writer(f)
         header = ["num_blocks"]
         [header.append(f"block_{i}_pos") for i in range(1,num_cubes+1)]
-        header.append("angle_x")
-        header.append("angle_y")
+        header.extend(["quat_x", "quat_y", "quat_z", "quat_w"])
         
         writer.writerow(header)
         
-        for i in angles_polycubes:
+        for i in quat_polycubes:
             row = []
             num_cubes_i = len(i[0])
             block_positions = []
@@ -49,39 +52,34 @@ def write_single_cubes(angles_polycubes):
                     block_positions.append(i[0][cube])
                 except IndexError:
                     block_positions.append("()")
-            angle_x = i[1][0]
-            angle_y = i[1][1]
-            
+            quat = i[1]
             row.append(num_cubes_i)
             row.extend(block_positions)
-            row.append(angle_x)
-            row.append(angle_y)
+            row.extend(quat)  # quat_x, quat_y, quat_z, quat_w
             
             writer.writerow(row)
-            
+
 def paired_row(args):
-    i, j, angles_polycubes, num_cubes = args
+    i, j, quat_polycubes, num_cubes = args
     row = []
-    id = i * len(angles_polycubes) + j
-    num_cubes_i = len(angles_polycubes[i][0])
+    id = i * len(quat_polycubes) + j
+    num_cubes_i = len(quat_polycubes[i][0])
     block_positions_i = []
     for cube in range(0, num_cubes):
-        if cube < len(angles_polycubes[i][0]):
-            block_positions_i.append(angles_polycubes[i][0][cube])
+        if cube < len(quat_polycubes[i][0]):
+            block_positions_i.append(quat_polycubes[i][0][cube])
         else:
             block_positions_i.append("()")
-    angle_x_i = angles_polycubes[i][1][0]
-    angle_y_i = angles_polycubes[i][1][1]
+    quat_i = quat_polycubes[i][1]
     
-    num_cubes_j = len(angles_polycubes[j][0])
+    num_cubes_j = len(quat_polycubes[j][0])
     block_positions_j = []
     for cube in range(0, num_cubes):
-        if cube < len(angles_polycubes[j][0]):
-            block_positions_j.append(angles_polycubes[j][0][cube])
+        if cube < len(quat_polycubes[j][0]):
+            block_positions_j.append(quat_polycubes[j][0][cube])
         else:
             block_positions_j.append("()")
-    angle_x_j = angles_polycubes[j][1][0]
-    angle_y_j = angles_polycubes[j][1][1]
+    quat_j = quat_polycubes[j][1]
     
     same = block_positions_i == block_positions_j
     
@@ -89,26 +87,22 @@ def paired_row(args):
     row.append(same)
     row.append(num_cubes_i)
     row.extend(block_positions_i)
-    row.append(angle_x_i)
-    row.append(angle_y_i)
+    row.extend(quat_i)
     row.append(num_cubes_j)
     row.extend(block_positions_j)
-    row.append(angle_x_j)
-    row.append(angle_y_j)
+    row.extend(quat_j)
     return row
 
-def write_paired_cubes(angles_polycubes):
+def write_paired_cubes(quat_polycubes):
     print("Export paired-cube list")
     header = ["id", "SAME", "im_1_num_blocks"]
     [header.append(f"im_1_block_{i}_pos") for i in range(1,num_cubes+1)]
-    header.append("im_1_angle_x")
-    header.append("im_1_angle_y")
+    header.extend(["im_1_quat_x", "im_1_quat_y", "im_1_quat_z", "im_1_quat_w"])
     header.append("im_2_num_blocks")
     [header.append(f"im_2_block_{i}_pos") for i in range(1,num_cubes+1)]
-    header.append("im_2_angle_x")
-    header.append("im_2_angle_y")
+    header.extend(["im_2_quat_x", "im_2_quat_y", "im_2_quat_z", "im_2_quat_w"])
 
-    task_queue = Queue(maxsize=1000)  # limit queue size to avoid memory issues
+    task_queue = Queue(maxsize=1000)
     write_lock = threading.Lock()
 
     def worker():
@@ -126,22 +120,21 @@ def write_paired_cubes(angles_polycubes):
         if pair_id_start == 0:
             writer.writerow(header)
 
-        num_workers = min(8, threading.active_count() + 4)  # adjust as needed
+        num_workers = min(8, threading.active_count() + 4)
         threads = []
         for _ in range(num_workers):
             t = threading.Thread(target=worker)
             t.start()
             threads.append(t)
             
-        i_start = int(pair_id_start / len(angles_polycubes))
-        j_start = pair_id_start - (len(angles_polycubes) * i_start)
-        print(f"Starting at {pair_id_start}, i={i_start}, j={j_start}. angles_polycubes={len(angles_polycubes)}")
+        i_start = int(pair_id_start / len(quat_polycubes))
+        j_start = pair_id_start - (len(quat_polycubes) * i_start)
+        print(f"Starting at {pair_id_start}, i={i_start}, j={j_start}. quat_polycubes={len(quat_polycubes)}")
 
-        for i in range(i_start, len(angles_polycubes)):
-            for j in range(j_start, len(angles_polycubes)):
-                task_queue.put((i, j, angles_polycubes, num_cubes))
+        for i in range(i_start, len(quat_polycubes)):
+            for j in range(j_start, len(quat_polycubes)):
+                task_queue.put((i, j, quat_polycubes, num_cubes))
 
-        # Signal workers to exit
         for _ in threads:
             task_queue.put(None)
 
@@ -162,17 +155,17 @@ if __name__ == "__main__":
     pair_id_start = args.pair_id_start
     single_only = args.single_only
     
-    print("Generating angles...")
-    angles = list(list_all_angles(angle_round))
+    print("Generating quaternions...")
+    quaternions = list(list_all_quaternions(angle_round))
     print("Generating polycubes...")
     polycubes = generate_all_polycubes(num_cubes)
     
-    print("Cross-join on angles and polycubes...")
-    angles_polycubes = [(y,x) for x in angles for y in polycubes]
+    print("Cross-join on quaternions and polycubes...")
+    quat_polycubes = [(y,x) for x in quaternions for y in polycubes]
     
-    write_single_cubes(angles_polycubes)
+    write_single_cubes(quat_polycubes)
             
     if not single_only:
-        write_paired_cubes(angles_polycubes)
+        write_paired_cubes(quat_polycubes)
             
     print("Done.")
