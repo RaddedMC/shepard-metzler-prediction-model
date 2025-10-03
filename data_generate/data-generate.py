@@ -159,7 +159,7 @@ if __name__ == "__main__":
     
     num_cubes = args.num_cubes
     angle_round = args.angle_round
-    pair_id_start = args.pair_id_start + 1
+    pair_id_start = args.pair_id_start
     single_only = args.single_only
     
     print("Generating angles...")

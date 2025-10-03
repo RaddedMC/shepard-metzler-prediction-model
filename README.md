@@ -4,7 +4,7 @@ This project, completed for ECE 9611 Intro to Machine Learning, aims to create a
 
 > **FOR ECE 9611 TA**\
 > Our dataset for Phase 1, is too large to upload to GitHub.\
-> You can run the generation code on your own machine if you wish, but beware that datasets can reach into the hundreds of GB!.\
+> You can run the generation code on your own machine if you wish, but beware that datasets can become several GB!.\
 > We are using an alternative storage solution for our dataset. We can provide you access to this should you desire.\
 
 ## The data
